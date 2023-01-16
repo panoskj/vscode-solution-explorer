@@ -34,17 +34,17 @@ export async function globFileSearch(searchPath: string, pattern: string, exclud
         const files = await fs.readdirinfo(searchPath);
 
         const results: { filepath: string, directory: boolean }[] = [];
-        for (const [name, directory] of files) {
+        await Promise.all(files.map(async ([name, directory]) => {
             const filepath = path.join(searchPath, name);
             if (!globTest(pattern, filepath) || exclude(filepath)) {
-                continue;
+                return;
             }
             results.push({ filepath, directory });
             if (directory) {
                 const childResults = await globFileSearch(filepath, pattern, exclude, statistics);
                 results.push(...childResults);
             }
-        }
+        }));
         return results;
     }
     else {
