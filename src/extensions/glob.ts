@@ -27,31 +27,36 @@ export function globTest(pattern: string | string[], input: string): boolean {
    return false;
 }
 
-export async function globFileSearch(workingFolder: string, pattern: string, exclude?:string | string[]): Promise<string[]> {
-    const result: string[] = [];
-    if (!isGlobPattern(pattern)) {
-        return [ path.join(workingFolder, pattern) ];
+export async function globFileSearch(searchPath: string, pattern: string, exclude: (fullpath: string) => boolean, statistics?: Record<string, number>):
+    Promise<{ filepath: string, directory: boolean }[]> {
+            
+    if (isGlobPattern(pattern)) {
+        const files = await fs.readdirinfo(searchPath);
+
+        const results: { filepath: string, directory: boolean }[] = [];
+        for (const [name, directory] of files) {
+            const filepath = path.join(searchPath, name);
+            if (!globTest(pattern, filepath) || exclude(filepath)) {
+                continue;
+            }
+            results.push({ filepath, directory });
+            if (directory) {
+                const childResults = await globFileSearch(filepath, pattern, exclude, statistics);
+                results.push(...childResults);
+            }
+        }
+        return results;
     }
-
-    const files = await fs.readdir(workingFolder);
-    for (let i = 0; i < files.length; i++) {
-        const filename = path.join(workingFolder, files[i]);
-        if (exclude && globTest(exclude, filename)) {
-            continue;
+    else {
+        const filepath = path.join(searchPath, pattern);
+        if (exclude(filepath)) return [];
+        try {
+            return [{ filepath, directory: await fs.isDirectory(filepath) }];
         }
-
-        if (globTest(pattern, filename)) {
-            result.push(filename);
-        }
-
-        const isDirectory = await fs.isDirectory(filename);
-        if (isDirectory) {
-            const subresult = await globFileSearch(filename, pattern, exclude);
-            result.push(...subresult);
+        catch {
+            return [{ filepath, directory: path.extname(filepath) === "" }];
         }
     }
-
-    return result;
 }
 
 export function isGlobPattern(pattern: string): boolean {

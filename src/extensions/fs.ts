@@ -59,3 +59,9 @@ export async function readdir(path: string): Promise<string[]> {
     const items = await vscode.workspace.fs.readDirectory(uri);
     return items.map(item => item[0]);
 }
+
+export async function readdirinfo(path: string): Promise<[path:string, directory:boolean][]> {
+    const uri = vscode.Uri.file(path);
+    const items = await vscode.workspace.fs.readDirectory(uri);
+    return items.map(([name, type]) => [name, type === vscode.FileType.Directory]);
+}

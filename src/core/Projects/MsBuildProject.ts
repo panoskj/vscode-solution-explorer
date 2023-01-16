@@ -1,8 +1,9 @@
 import * as fs from "@extensions/fs";
 import * as path from "@extensions/path";
 import * as config from "@extensions/config";
-import { ProjectItemEntry, PackageReference, ProjectReference, Reference } from "./Items";
+import { ProjectItemEntry, PackageReference, ProjectReference, Reference, Include } from "./Items";
 import { ProjectWithManagers } from "./ProjectWithManagers";
+import { Remove } from "./Items/Remove";
 
 export class MsBuildProject extends ProjectWithManagers {
     private references: Reference[] = [];
@@ -128,10 +129,16 @@ export class MsBuildProject extends ProjectWithManagers {
         const projectItems = await this.xml.getProjectItems();
         const entries: ProjectItemEntry[] = [];
         const projectBasePath = path.dirname(this.fullPath);
-        for(const item of projectItems) {
-            await item.getEntries(projectBasePath, entries);
+        for (let i = 0; i < projectItems.length; ++i) {
+            const item = projectItems[i];
+            if (item instanceof Include) {
+                const removals = projectItems
+                    .slice(i + 1)
+                    .filter(x => x instanceof Remove);
+                await item.getEntriesFast(projectBasePath, entries, removals as Remove[]);
+            }
+            else await item.getEntries(projectBasePath, entries);
         }
-
         return entries;
     }
 

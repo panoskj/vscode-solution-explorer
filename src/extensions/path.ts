@@ -25,3 +25,8 @@ export function relative(from: string, to: string): string {
 export function resolve(...paths: string[]): string {
     return path.resolve(...paths);
 }
+
+export function isAbsolute(paths: string): boolean {
+    return path.isAbsolute(paths);
+}
+
